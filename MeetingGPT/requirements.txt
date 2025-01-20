@@ -1,10 +1,4 @@
 pyaudio
-wave
-os-sys
-queue
-time
-datetime
-json
 streamlit
 openai
 bcrypt
