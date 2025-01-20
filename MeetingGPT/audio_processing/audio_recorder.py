@@ -1,12 +1,10 @@
+import pyaudio
+import wave
 import os
 import logging
 import queue
 import time
 from datetime import datetime
-import wave
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
-from pydub import AudioSegment
-import numpy as np
 
 # Configuração do logger
 logging.basicConfig(
@@ -16,31 +14,16 @@ logging.basicConfig(
 )
 
 # Diretório para salvar os áudios
-AUDIO_SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "audio")
+AUDIO_SAVE_PATH = r'C:\Users\Novaes Engenharia\MeetingGPT\data\audio'
 os.makedirs(AUDIO_SAVE_PATH, exist_ok=True)
-
-class AudioProcessor(AudioProcessorBase):
-    """
-    Processador de áudio para capturar frames do WebRTC.
-    """
-    def __init__(self, recorder):
-        self.recorder = recorder
-
-    def recv(self, frame):
-        """
-        Processa os frames de áudio enquanto a gravação estiver ativa.
-        """
-        if self.recorder.is_recording:
-            audio_data = frame.to_ndarray().astype(np.int16)  # Converte para 16-bit
-            self.recorder.queue.put(audio_data)
-            self.recorder.frames.append(audio_data)
-        return frame
 
 class AudioRecorder:
     def __init__(self):
         """
-        Inicializa o gravador de áudio usando WebRTC.
+        Inicializa o gravador de áudio com as configurações padrão.
         """
+        self.audio = pyaudio.PyAudio()
+        self.stream = None
         self.frames = []
         self.queue = queue.Queue()
         self.is_recording = False
@@ -54,20 +37,47 @@ class AudioRecorder:
                 logging.warning("Tentativa de iniciar uma gravação já em andamento.")
                 return
 
+            self.stream = self.audio.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=44100,
+                input=True,
+                frames_per_buffer=1024,
+                stream_callback=self.callback
+            )
             self.is_recording = True
             self.frames = []
-            print("🎙️ Gravando... Digite **ENTER** para parar a gravação.")
-
-            self.processor = webrtc_streamer(
-                key="audio_recorder",
-                mode=WebRtcMode.SENDONLY,
-                audio_processor_factory=lambda: AudioProcessor(self)
-            )
-
+            self.stream.start_stream()
             logging.info("🟢 Gravação iniciada com sucesso.")
+            print("🎙️ Gravando... Digite **ENTER** para parar a gravação.")  
         except Exception as e:
             logging.error(f"❌ Erro ao iniciar a gravação: {e}")
             raise RuntimeError(f"Erro ao iniciar a gravação: {e}")
+
+    def callback(self, in_data, frame_count, time_info, status):
+        """
+        Captura os frames de áudio enquanto a gravação estiver ativa.
+        """
+        if self.is_recording:
+            self.queue.put(in_data)
+            self.frames.append(in_data)
+        return (in_data, pyaudio.paContinue)
+
+    def process_audio(self):
+        """
+        Processa os dados de áudio enquanto a gravação está ativa.
+        """
+        try:
+            while self.is_recording:
+                try:
+                    data = self.queue.get(timeout=1)
+                    self.frames.append(data)  # Adiciona os dados capturados
+                except queue.Empty:
+                    time.sleep(0.1)
+                    continue
+        except Exception as e:
+            logging.error(f"❌ Erro no processamento de áudio: {e}")
+            raise
 
     def stop_recording(self):
         """
@@ -79,15 +89,18 @@ class AudioRecorder:
                 raise RuntimeError("Nenhuma gravação está em andamento para parar.")
 
             self.is_recording = False
+            self.stream.stop_stream()
+            self.stream.close()
             logging.info("🔴 Gravação finalizada com sucesso.")
             print("🔴 Gravação finalizada.")  
+
         except Exception as e:
             logging.error(f"❌ Erro ao parar a gravação: {e}")
             raise RuntimeError(f"Erro ao parar a gravação: {e}")
 
     def save_audio(self, filename=None):
         """
-        Salva o áudio gravado em um arquivo .wav (usando PyDub).
+        Salva o áudio gravado em um arquivo .wav (sem precisar de FFmpeg).
         """
         try:
             if not self.frames:
@@ -100,21 +113,13 @@ class AudioRecorder:
 
             filepath = os.path.join(AUDIO_SAVE_PATH, filename)
 
-            # Converter lista de arrays numpy para um array único
-            if self.frames:
-                audio_data = np.concatenate(self.frames, axis=0).tobytes()
-            else:
-                raise RuntimeError("❌ Nenhum frame de áudio válido para salvar.")
+            # Salva o áudio em formato WAV usando wave (NÃO PRECISA DE FFMPEG)
+            with wave.open(filepath, 'wb') as wf:
+                wf.setnchannels(1)  # Mono
+                wf.setsampwidth(self.audio.get_sample_size(pyaudio.paInt16))
+                wf.setframerate(44100)
+                wf.writeframes(b''.join(self.frames))
 
-            # Criar um AudioSegment a partir dos dados
-            audio_segment = AudioSegment(
-                data=audio_data,
-                sample_width=2,  # 16 bits por amostra
-                frame_rate=44100,
-                channels=1
-            )
-            
-            audio_segment.export(filepath, format="wav")
             logging.info(f"✅ Áudio salvo com sucesso: {filepath}")
             return filepath
         except Exception as e:
@@ -126,6 +131,7 @@ class AudioRecorder:
         Libera os recursos utilizados pelo gravador de áudio.
         """
         try:
+            self.audio.terminate()
             logging.info("⚡ Recursos de áudio liberados com sucesso.")
         except Exception as e:
             logging.error(f"❌ Erro ao liberar recursos de áudio: {e}")
@@ -143,6 +149,7 @@ if __name__ == "__main__":
         recorder.stop_recording()
         filepath = recorder.save_audio()
         print(f"✅ Áudio salvo em: {filepath}")
+
     finally:
         recorder.cleanup()
 
