@@ -9,6 +9,18 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+# Obtém o diretório base do projeto (garantindo que o caminho seja correto no Streamlit Cloud)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Define o diretório correto onde o banco de dados será salvo
+DATABASE_DIR = os.path.join(BASE_DIR, "..", "data")  # Caminho relativo para a pasta 'data'
+
+# Garante que a pasta existe antes de tentar criar o banco de dados
+if not os.path.exists(DATABASE_DIR):
+    os.makedirs(DATABASE_DIR, exist_ok=True)
+
+# Define o caminho correto do banco de dados
+DATABASE_PATH = os.path.join(DATABASE_DIR, "database_meeting.db")
 
 class DatabaseMeeting:
     def __init__(self):
