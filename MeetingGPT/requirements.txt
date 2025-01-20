@@ -1,7 +1,6 @@
 pyaudio
 wave
 os-sys
-logging
 queue
 time
 datetime
