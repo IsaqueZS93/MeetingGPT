@@ -14,6 +14,13 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+# Tenta instalar a biblioteca PortAudio se não estiver disponível
+try:
+    import sounddevice as sd
+except OSError:
+    os.system("apt-get update && apt-get install -y libportaudio2")
+    import sounddevice as sd
+
 # Diretório para salvar os áudios
 AUDIO_SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "audio")
 os.makedirs(AUDIO_SAVE_PATH, exist_ok=True)
