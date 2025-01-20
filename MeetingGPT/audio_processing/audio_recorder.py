@@ -22,7 +22,7 @@ os.makedirs(AUDIO_SAVE_PATH, exist_ok=True)
 class AudioRecorder:
     def __init__(self):
         """ Inicializa o gravador de áudio. """
-        self.audio_data = pydub.AudioSegment.empty()
+        self.audio_frames = []
         self.is_recording = False
         st.session_state["audio_ready"] = False
         logging.debug("✅ AudioRecorder inicializado.")
@@ -34,15 +34,24 @@ class AudioRecorder:
                 logging.warning("⚠️ Tentativa de iniciar uma gravação já em andamento.")
                 return
 
+            self.is_recording = True
+            self.audio_frames = []  # Resetar os frames de áudio
             logging.info("🎬 Iniciando o webrtc_streamer...")
+
+            def callback(frame: av.AudioFrame):
+                """ Callback para capturar frames de áudio """
+                self.audio_frames.append(frame)
+
             st.session_state["webrtc_ctx"] = webrtc_streamer(
                 key="audio_capture",
                 mode=WebRtcMode.SENDONLY,
                 audio_receiver_size=1024,
                 media_stream_constraints={"audio": True, "video": False},
+                rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+                async_processing=True,
+                on_audio_frame=callback
             )
-
-            self.is_recording = True
+            
             logging.info("🟢 Gravação iniciada com sucesso.")
             st.write("🎙️ Gravando... Pressione o botão para parar.")
         except Exception as e:
@@ -58,41 +67,37 @@ class AudioRecorder:
                 return
 
             self.is_recording = False
-            webrtc_ctx = st.session_state.get("webrtc_ctx")
 
-            if webrtc_ctx and webrtc_ctx.audio_receiver:
-                frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
-                if frames:
-                    self.audio_data = self.process_audio(frames)
-                    st.session_state["audio_ready"] = True
-                    logging.info("🔴 Gravação finalizada com sucesso.")
-                    st.write("🔴 Gravação finalizada.")
-                else:
-                    logging.warning("⚠️ Nenhum áudio foi capturado.")
-                    st.warning("⚠️ Nenhum áudio foi capturado.")
+            if self.audio_frames:
+                self.process_audio()
+                st.session_state["audio_ready"] = True
+                logging.info("🔴 Gravação finalizada com sucesso.")
+                st.write("🔴 Gravação finalizada.")
             else:
-                logging.error("❌ Nenhuma conexão de áudio ativa encontrada.")
-                st.error("Erro ao capturar o áudio.")
+                logging.warning("⚠️ Nenhum áudio foi capturado.")
+                st.warning("⚠️ Nenhum áudio foi capturado.")
         except Exception as e:
             logging.error(f"❌ Erro ao parar a gravação: {e}")
             st.error(f"Erro ao parar a gravação: {e}")
 
-    def process_audio(self, frames):
-        """ Processa os frames de áudio e retorna um objeto AudioSegment. """
-        audio_segment = pydub.AudioSegment.empty()
+    def process_audio(self):
+        """ Processa os frames de áudio capturados e converte para um arquivo de áudio. """
         try:
-            for frame in frames:
-                sound = pydub.AudioSegment(
-                    data=frame.to_ndarray().tobytes(),
+            audio_segments = []
+            for frame in self.audio_frames:
+                audio = np.frombuffer(frame.to_ndarray().tobytes(), dtype=np.int16)
+                segment = pydub.AudioSegment(
+                    data=audio.tobytes(),
                     sample_width=frame.format.bytes,
                     frame_rate=frame.sample_rate,
                     channels=len(frame.layout.channels),
                 )
-                audio_segment += sound
+                audio_segments.append(segment)
+            
+            self.audio_data = sum(audio_segments)
             logging.info("✅ Áudio processado com sucesso.")
         except Exception as e:
             logging.error(f"❌ Erro ao processar frames de áudio: {e}")
-        return audio_segment
 
     def save_audio(self, filename=None):
         """ Salva o áudio gravado em um arquivo .wav. """
