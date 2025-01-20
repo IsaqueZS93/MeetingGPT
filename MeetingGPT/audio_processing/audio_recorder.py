@@ -1,6 +1,10 @@
+import os
+
+# Tenta instalar PortAudio e PyAudio antes da execução
+os.system("apt-get update && apt-get install -y libportaudio2 portaudio19-dev && pip install sounddevice")
+
 import pyaudio
 import wave
-import os
 import logging
 import queue
 import time
