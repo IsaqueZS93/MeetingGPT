@@ -8,7 +8,7 @@ datetime
 json
 streamlit
 openai
-sqlite3
+
 bcrypt
 langchain
 langchain-openai
