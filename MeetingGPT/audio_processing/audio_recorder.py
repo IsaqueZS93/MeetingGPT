@@ -38,18 +38,12 @@ class AudioRecorder:
             self.audio_frames = []  # Resetar os frames de áudio
             logging.info("🎬 Iniciando o webrtc_streamer...")
 
-            def callback(frame: av.AudioFrame):
-                """ Callback para capturar frames de áudio """
-                self.audio_frames.append(frame)
-
-            st.session_state["webrtc_ctx"] = webrtc_streamer(
+            self.webrtc_ctx = webrtc_streamer(
                 key="audio_capture",
                 mode=WebRtcMode.SENDONLY,
                 audio_receiver_size=1024,
                 media_stream_constraints={"audio": True, "video": False},
                 rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-                async_processing=True,
-                on_audio_frame=callback
             )
             
             logging.info("🟢 Gravação iniciada com sucesso.")
@@ -68,14 +62,23 @@ class AudioRecorder:
 
             self.is_recording = False
 
-            if self.audio_frames:
-                self.process_audio()
-                st.session_state["audio_ready"] = True
-                logging.info("🔴 Gravação finalizada com sucesso.")
-                st.write("🔴 Gravação finalizada.")
-            else:
-                logging.warning("⚠️ Nenhum áudio foi capturado.")
-                st.warning("⚠️ Nenhum áudio foi capturado.")
+            if self.webrtc_ctx and self.webrtc_ctx.audio_receiver:
+                self.audio_frames = []
+                while True:
+                    try:
+                        frame = self.webrtc_ctx.audio_receiver.get_frame(timeout=1)
+                        self.audio_frames.append(frame)
+                    except Exception:
+                        break
+                
+                if self.audio_frames:
+                    self.process_audio()
+                    st.session_state["audio_ready"] = True
+                    logging.info("🔴 Gravação finalizada com sucesso.")
+                    st.write("🔴 Gravação finalizada.")
+                else:
+                    logging.warning("⚠️ Nenhum áudio foi capturado.")
+                    st.warning("⚠️ Nenhum áudio foi capturado.")
         except Exception as e:
             logging.error(f"❌ Erro ao parar a gravação: {e}")
             st.error(f"Erro ao parar a gravação: {e}")
