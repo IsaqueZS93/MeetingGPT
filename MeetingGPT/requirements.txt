@@ -6,3 +6,4 @@ langchain-openai
 numpy
 wave
 streamlit-webrtc
+pydub
