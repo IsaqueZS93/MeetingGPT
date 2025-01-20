@@ -1,4 +1,4 @@
-git+https://github.com/jleb/pyaudio.git
+
 streamlit
 openai
 bcrypt
