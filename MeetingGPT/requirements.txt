@@ -7,3 +7,4 @@ numpy
 wave
 streamlit-webrtc
 pydub
+ffmpeg
