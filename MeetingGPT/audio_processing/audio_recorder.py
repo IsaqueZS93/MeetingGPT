@@ -18,8 +18,14 @@ logging.basicConfig(
 try:
     import sounddevice as sd
 except OSError:
-    os.system("apt-get update && apt-get install -y libportaudio2")
-    import sounddevice as sd
+    if platform.system() == "Linux":
+        print("🔧 Instalando dependências do sistema...")
+        os.system("apt-get update && apt-get install -y libportaudio2")
+    try:
+        import sounddevice as sd
+    except OSError:
+        raise RuntimeError("❌ Erro crítico: PortAudio ainda não foi encontrado após a instalação!")
+
 
 # Diretório para salvar os áudios
 AUDIO_SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "audio")
