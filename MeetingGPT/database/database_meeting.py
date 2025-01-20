@@ -9,12 +9,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Configuração inicial do logger
-logging.basicConfig(
-    filename='database_meeting.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 
 class DatabaseMeeting:
     def __init__(self):
