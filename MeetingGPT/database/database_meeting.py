@@ -9,9 +9,12 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Diretório do banco de dados
-DATABASE_PATH = r'C:\Users\Novaes Engenharia\MeetingGPT\data\database_meeting.db'
-os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
+# Configuração inicial do logger
+logging.basicConfig(
+    filename='database_meeting.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 class DatabaseMeeting:
     def __init__(self):
