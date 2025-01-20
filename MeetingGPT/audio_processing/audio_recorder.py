@@ -19,6 +19,23 @@ logging.basicConfig(
 AUDIO_SAVE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "audio")
 os.makedirs(AUDIO_SAVE_PATH, exist_ok=True)
 
+class AudioProcessor(AudioProcessorBase):
+    """
+    Processador de áudio para capturar frames do WebRTC.
+    """
+    def __init__(self, recorder):
+        self.recorder = recorder
+
+    def recv(self, frame):
+        """
+        Processa os frames de áudio enquanto a gravação estiver ativa.
+        """
+        if self.recorder.is_recording:
+            audio_data = frame.to_ndarray().astype(np.int16)  # Converte para 16-bit
+            self.recorder.queue.put(audio_data)
+            self.recorder.frames.append(audio_data)
+        return frame
+
 class AudioRecorder:
     def __init__(self):
         """
@@ -40,17 +57,11 @@ class AudioRecorder:
             self.is_recording = True
             self.frames = []
             print("🎙️ Gravando... Digite **ENTER** para parar a gravação.")
-            
-            def callback(frame):
-                if self.is_recording:
-                    self.queue.put(frame)
-                    self.frames.append(frame)
-                return frame
 
             self.processor = webrtc_streamer(
                 key="audio_recorder",
                 mode=WebRtcMode.SENDONLY,
-                audio_processor_factory=callback
+                audio_processor_factory=lambda: AudioProcessor(self)
             )
 
             logging.info("🟢 Gravação iniciada com sucesso.")
@@ -89,9 +100,15 @@ class AudioRecorder:
 
             filepath = os.path.join(AUDIO_SAVE_PATH, filename)
 
-            audio_data = np.concatenate(self.frames, axis=0)
+            # Converter lista de arrays numpy para um array único
+            if self.frames:
+                audio_data = np.concatenate(self.frames, axis=0).tobytes()
+            else:
+                raise RuntimeError("❌ Nenhum frame de áudio válido para salvar.")
+
+            # Criar um AudioSegment a partir dos dados
             audio_segment = AudioSegment(
-                data=audio_data.tobytes(),
+                data=audio_data,
                 sample_width=2,  # 16 bits por amostra
                 frame_rate=44100,
                 channels=1
@@ -128,3 +145,4 @@ if __name__ == "__main__":
         print(f"✅ Áudio salvo em: {filepath}")
     finally:
         recorder.cleanup()
+
