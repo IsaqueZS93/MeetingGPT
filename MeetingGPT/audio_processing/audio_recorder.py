@@ -1,7 +1,9 @@
 import os
 
 # Tenta instalar PortAudio e PyAudio antes da execução
-os.system("pip install pyaudio")
+if os.system("dpkg -s libportaudio2 > /dev/null 2>&1") != 0:
+    print("🔧 Instalando PortAudio...")
+    os.system("apt-get update && apt-get install -y libportaudio2 portaudio19-dev")
 
 import pyaudio
 import wave
