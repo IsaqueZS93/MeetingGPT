@@ -6,5 +6,4 @@ langchain-openai
 numpy
 wave
 streamlit_webrtc
-pydub
-ffmpeg
+pyaudio
