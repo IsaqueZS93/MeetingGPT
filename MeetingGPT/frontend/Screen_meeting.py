@@ -9,7 +9,7 @@ from insights.insights_generator import InsightsGenerator
 # Configuração inicial do logger
 logging.basicConfig(
     filename='screen_meeting.log',
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
@@ -33,9 +33,11 @@ class MeetingScreen:
         if "audio_file_path" not in st.session_state:
             st.session_state["audio_file_path"] = None
         if "audio_recorder" not in st.session_state:
-            st.session_state["audio_recorder"] = None
+            st.session_state["audio_recorder"] = AudioRecorder()
         if "user_id" not in st.session_state:
             st.session_state["user_id"] = self.user_id
+        if "audio_ready" not in st.session_state:
+            st.session_state["audio_ready"] = False
         if "meeting_data" not in st.session_state:
             st.session_state["meeting_data"] = {
                 "user_id": self.user_id,
@@ -93,7 +95,6 @@ class MeetingScreen:
     def start_meeting(self):
         """Inicia a gravação de áudio da reunião."""
         try:
-            st.session_state["audio_recorder"] = AudioRecorder()
             st.session_state["audio_recorder"].start_recording()
             st.session_state["recording"] = True
             logging.info("🟢 Reunião iniciada e gravação de áudio em andamento.")
@@ -105,7 +106,7 @@ class MeetingScreen:
     def stop_meeting(self):
         """Finaliza a gravação da reunião e salva o áudio."""
         try:
-            if st.session_state["audio_recorder"]:
+            if st.session_state["recording"] and st.session_state["audio_ready"]:
                 st.session_state["audio_recorder"].stop_recording()
                 st.session_state["recording"] = False
                 audio_path = st.session_state["audio_recorder"].save_audio()
@@ -117,7 +118,7 @@ class MeetingScreen:
                 else:
                     st.error("❌ Erro ao salvar o áudio. O arquivo não foi gerado.")
             else:
-                st.error("❌ Nenhuma gravação ativa foi encontrada.")
+                st.warning("⚠️ Nenhum áudio foi capturado. Verifique as permissões do microfone.")
         except Exception as e:
             logging.error(f"❌ Erro ao parar a gravação: {e}")
             st.error(f"Erro ao parar a gravação: {e}")
@@ -130,6 +131,10 @@ class MeetingScreen:
                 return
 
             audio_file_path = st.session_state["audio_file_path"]
+
+            if not audio_file_path:
+                st.error("⚠️ Nenhum áudio foi salvo. Verifique se a gravação foi finalizada corretamente.")
+                return
 
             # Transcrição do áudio
             transcription_data = self.transcriber.transcribe_audio(audio_file_path)
@@ -150,10 +155,6 @@ class MeetingScreen:
         except Exception as e:
             logging.error(f"❌ Erro ao gerar transcrição e insights: {e}")
             st.error("Erro ao gerar transcrição e insights.")
-
-    def cleanup(self):
-        """Encerra a conexão com o banco de dados."""
-        self.db.close_connection()
 
 if __name__ == "__main__":
     screen = MeetingScreen()
