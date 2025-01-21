@@ -1,6 +1,9 @@
+import os
+os.system("apt-get update && apt-get install -y portaudio19-dev")
+os.system("pip install pyaudio")
+
 import pyaudio
 import wave
-import os
 import logging
 import queue
 import time
