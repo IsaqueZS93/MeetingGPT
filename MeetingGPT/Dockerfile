@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     pulseaudio \
     ffmpeg \
     build-essential \
+    libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Define o diretório de trabalho
