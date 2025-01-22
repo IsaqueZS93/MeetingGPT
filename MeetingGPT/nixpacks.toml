@@ -1,1 +1,3 @@
+export NIX_PATH=nixpkgs=https://nixos.org/channels/nixos-unstable
+nix-shell -p portaudio alsa-lib ffmpeg
 
