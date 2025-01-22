@@ -7,23 +7,18 @@ RUN apt-get update && apt-get install -y \
     alsa-utils \
     pulseaudio \
     ffmpeg \
-    build-essential \
-    libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Define o diretório de trabalho
+# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia os arquivos do projeto para dentro do contêiner
+# Copia os arquivos do projeto para dentro do container
 COPY . /app
 
-# Cria e ativa o ambiente virtual e instala as dependências
+# Cria um ambiente virtual e instala as dependências do projeto
 RUN python -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+    . /opt/venv/bin/activate && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Define o ambiente virtual como padrão para os comandos subsequentes
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Define o comando de execução do container
+# Define o comando para iniciar o Streamlit no container
 CMD ["streamlit", "run", "meeting_main.py", "--server.port=8501", "--server.address=0.0.0.0"]
