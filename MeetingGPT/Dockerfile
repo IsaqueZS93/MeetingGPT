@@ -1,4 +1,4 @@
-FROM python:3.11
+
 
 # Define o diretório de trabalho
 WORKDIR /app
@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
     pulseaudio \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
+
+FROM python:3.11
 
 # Cria um ambiente virtual e instala as dependências do projeto
 RUN python -m venv /opt/venv && \
