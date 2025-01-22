@@ -15,7 +15,7 @@ WORKDIR /app
 # Copia os arquivos para o container
 COPY . /app
 
-# Usa explicitamente o `python3` ao invés de `python`
+# Usa `python3` explicitamente
 RUN python3 -m venv /opt/venv && \
     . /opt/venv/bin/activate && \
     pip install --no-cache-dir -r requirements.txt
