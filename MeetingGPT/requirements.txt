@@ -1,10 +1,11 @@
 streamlit
+streamlit-webrtc
 openai
 bcrypt
 langchain
 langchain-openai
 numpy
 wave
-streamlit-webrtc
 pydub
+
 
